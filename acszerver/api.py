@@ -155,6 +155,7 @@ class Api:
         self._log_lock = threading.Lock()
         self._server = ServerProcess(on_line=self._on_line, on_exit=self._on_exit)
         threading.Thread(target=self._log_flusher, daemon=True).start()
+        threading.Thread(target=updater.cleanup_old_downloads, daemon=True).start()
 
     # ------------------------------------------------------------ belső
 

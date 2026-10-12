@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -62,6 +63,12 @@ def check() -> dict | None:
         "setup_url": assets[setup],
         "sha_url": assets[f"{setup}.sha256"],
     }
+
+
+def cleanup_old_downloads() -> None:
+    """A korábbi frissítésekhez letöltött telepítők törlése (induláskor hívjuk)."""
+    for d in Path(tempfile.gettempdir()).glob("acszk_update_*"):
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def _download(url: str, dest: Path, progress: Callable[[float], None] | None = None) -> None:

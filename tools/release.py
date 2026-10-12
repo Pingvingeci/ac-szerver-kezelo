@@ -64,6 +64,15 @@ def main() -> None:
     run(git, "push")
     run(git, "push", "origin", tag)
     run(gh, "release", "create", tag, str(setup), str(sha), "--title", tag, "--notes", notes)
+
+    # Csak a legújabb kiadás maradjon meg: a régieket (és a címkéjüket) töröljük
+    for old in run(gh, "release", "list", "--limit", "100", "--json", "tagName", "--jq", ".[].tagName", capture=True).split():
+        if old != tag:
+            run(gh, "release", "delete", old, "--yes", "--cleanup-tag")
+    # A régi telepítők a dist mappából is mennek
+    for f in (ROOT / "dist").glob("AC_Szerver_Kezelo_Setup_*"):
+        if version not in f.name:
+            f.unlink()
     print(f"\nKész: {tag} kiadva.")
 
 
