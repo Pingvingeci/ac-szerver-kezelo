@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+assets/icon.ico
+
+# Személyes autómodolós eszközök – nem a program része
+tools/acd.py
+tools/kn5_info.py
+tools/make_e39_530d.py

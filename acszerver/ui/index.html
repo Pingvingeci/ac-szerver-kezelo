@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AC Szerver Kezelő</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="grid-overlay"></div></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><i data-icon="flag"></i></div>
+      <div><b>AC Szerver</b><span>Kezelő <em id="appVersion"></em></span></div>
+    </div>
+    <nav id="nav">
+      <div class="nav-pill" id="navPill"></div>
+      <button data-page="build" class="active"><i data-icon="layers"></i>Összeállítás</button>
+      <button data-page="rules"><i data-icon="sliders"></i>Szabályok</button>
+      <button data-page="server"><i data-icon="server"></i>Szerver</button>
+      <button data-page="network"><i data-icon="globe"></i>Hálózat</button>
+      <button data-page="log"><i data-icon="terminal"></i>Napló<span class="nav-badge" id="logBadge">0</span></button>
+    </nav>
+    <div class="status-card">
+      <div class="status-row"><span class="dot"></span><b id="statusText">Leállítva</b></div>
+      <div class="uptime" id="uptime">--:--:--</div>
+      <div class="status-mini" id="statusMini">Nincs pálya kiválasztva</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="update-bar" id="updateBar">
+      <span class="ub-icon"><i data-icon="download"></i></span>
+      <div><b>Új verzió érhető el: v<span id="ubVer"></span></b> <span class="muted">(most: v<span id="ubCur"></span>)</span></div>
+      <div class="spacer"></div>
+      <button class="btn sm ghost" id="ubNotes">Mi változott?</button>
+      <button class="btn sm primary" id="ubInstall"><i data-icon="download"></i><span>Frissítés most</span></button>
+      <button class="icon-btn" id="ubClose" title="Később"><i data-icon="x"></i></button>
+      <div class="ub-progress"><span id="ubProg"></span></div>
+    </div>
+    <header class="topbar">
+      <div><h1 id="pageTitle">Összeállítás</h1><p id="pageSub"></p></div>
+      <div class="actions">
+        <button class="btn ghost" id="btnRestart" disabled><i data-icon="refresh"></i>Újraindítás</button>
+        <button class="btn danger" id="btnStop" disabled><i data-icon="stop" class="fill"></i>Leállítás</button>
+        <button class="btn start" id="btnStart"><span class="shine"></span><i data-icon="play" class="fill"></i><span class="lbl">Szerver indítása</span></button>
+      </div>
+    </header>
+
+    <section class="pages">
+      <!-- ============ ÖSSZEÁLLÍTÁS ============ -->
+      <div class="page active" id="page-build">
+        <div class="lane">
+          <div class="lane-head">
+            <div class="lane-icon"><i data-icon="route"></i></div>
+            <div><h2>Pálya</h2><p>Egyszerre egy pálya futhat a szerveren</p></div>
+            <div class="spacer"></div>
+            <div class="count-chip" id="trackChip">0 / 1</div>
+          </div>
+          <div id="trackLane"></div>
+        </div>
+
+        <div class="lane">
+          <div class="lane-head">
+            <div class="lane-icon"><i data-icon="car"></i></div>
+            <div><h2>Autók</h2><p>Add hozzá az autókat, és állítsd be, hány hely legyen belőlük</p></div>
+            <div class="spacer"></div>
+            <div class="capacity" id="capacity">
+              <div class="cap-text"><span>Helyek</span><b id="capText">0</b></div>
+              <div class="cap-bar"><div class="cap-fill" id="capFill"></div></div>
+            </div>
+          </div>
+          <div class="car-grid" id="carGrid"></div>
+        </div>
+        <div class="banner hidden" id="modBanner"></div>
+      </div>
+
+      <!-- ============ SZABÁLYOK ============ -->
+      <div class="page" id="page-rules">
+        <div class="cards">
+          <div class="card">
+            <div class="card-head"><i data-icon="flag"></i><h3>Sessionök</h3></div>
+            <div class="row first">
+              <div class="label"><b>Szabadedzés</b><small>Practice</small></div>
+              <div class="ctrl">
+                <div class="stepper"><button data-step="-5">−</button><input type="number" data-key="practice.minutes" min="1" max="1440"><button data-step="5">+</button></div>
+                <span class="muted">perc</span>
+                <label class="toggle"><input type="checkbox" data-key="practice.enabled"><span class="track"></span></label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="label"><b>Időmérő</b><small>Qualify</small></div>
+              <div class="ctrl">
+                <div class="stepper"><button data-step="-5">−</button><input type="number" data-key="qualify.minutes" min="1" max="1440"><button data-step="5">+</button></div>
+                <span class="muted">perc</span>
+                <label class="toggle"><input type="checkbox" data-key="qualify.enabled"><span class="track"></span></label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="label"><b>Verseny</b><small>Race</small></div>
+              <div class="ctrl">
+                <div class="seg" data-key="race.mode"><button data-v="laps">Kör</button><button data-v="time">Perc</button></div>
+                <div class="stepper"><button data-step="-1">−</button><input type="number" data-key="race.value" min="1" max="1000"><button data-step="1">+</button></div>
+                <label class="toggle"><input type="checkbox" data-key="race.enabled"><span class="track"></span></label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="label"><b>Várakozás a rajt előtt</b><small>másodperc</small></div>
+              <div class="ctrl"><div class="stepper"><button data-step="-10">−</button><input type="number" data-key="race.wait" min="0" max="3600"><button data-step="10">+</button></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="sun"></i><h3>Időjárás és napszak</h3></div>
+            <div class="sky" id="sky"><div class="sun" id="sun"></div><div class="hill"></div><div class="time" id="skyTime">14:00</div></div>
+            <div class="range" style="margin-bottom:16px"><input type="range" data-key="weather.hour" min="8" max="18" step="0.25"></div>
+            <div class="chip-select" id="weatherChips" data-key="weather.graphics"></div>
+            <div class="row" style="margin-top:12px">
+              <div class="label"><b>Levegő hőmérséklete</b><small>°C</small></div>
+              <div class="ctrl"><div class="stepper"><button data-step="-1">−</button><input type="number" data-key="weather.ambient" min="-20" max="50"><button data-step="1">+</button></div></div>
+            </div>
+            <div class="row">
+              <div class="label"><b>Aszfalt melegebb ennyivel</b><small>°C a levegőhöz képest</small></div>
+              <div class="ctrl"><div class="stepper"><button data-step="-1">−</button><input type="number" data-key="weather.road" min="-10" max="40"><button data-step="1">+</button></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="activity"></i><h3>Aszfalt tapadása</h3><div class="spacer"></div><span class="grip-badge" id="gripBadge">Közepes</span></div>
+            <p class="hint" style="margin-bottom:14px">Mennyire tapad az aszfalt. Kisebb tapadásnál könnyebben csúszik az autó (drifthez), nagyobbnál jobban fog. Menet közben nem változik.</p>
+            <div class="range grip-range"><input type="range" data-key="track.grip" min="80" max="100" step="1" data-suffix="%"><output></output></div>
+            <div class="grip-labels"><button data-grip="80">Drift</button><button data-grip="90">Közepes</button><button data-grip="100">Tapadás</button></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="shield"></i><h3>Segédletek</h3></div>
+            <div class="row first">
+              <div class="label"><b>ABS</b></div>
+              <div class="seg" data-key="assist.abs"><button data-v="0">Tiltva</button><button data-v="1">Autó szerint</button><button data-v="2">Kötelező</button></div>
+            </div>
+            <div class="row">
+              <div class="label"><b>Kipörgésgátló (TC)</b></div>
+              <div class="seg" data-key="assist.tc"><button data-v="0">Tiltva</button><button data-v="1">Autó szerint</button><button data-v="2">Kötelező</button></div>
+            </div>
+            <div class="row"><div class="label"><b>Menetstabilizátor</b><small>stability control</small></div><label class="toggle"><input type="checkbox" data-key="assist.stability"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Automata kuplung</b></div><label class="toggle"><input type="checkbox" data-key="assist.autoclutch"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Gumimelegítő</b><small>tyre blankets</small></div><label class="toggle"><input type="checkbox" data-key="assist.blankets"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Virtuális tükör kötelező</b></div><label class="toggle"><input type="checkbox" data-key="assist.mirror"><span class="track"></span></label></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="gauge"></i><h3>Realizmus</h3></div>
+            <div class="field"><label>Sérülés</label><div class="range"><input type="range" data-key="real.damage" min="0" max="100" step="5" data-suffix="%"><output></output></div></div>
+            <div class="field"><label>Üzemanyag-fogyasztás</label><div class="range"><input type="range" data-key="real.fuel" min="0" max="300" step="10" data-suffix="%"><output></output></div></div>
+            <div class="field"><label>Gumikopás</label><div class="range"><input type="range" data-key="real.wear" min="0" max="300" step="10" data-suffix="%"><output></output></div></div>
+            <div class="row">
+              <div class="label"><b>Pályaelhagyás</b><small>max. ennyi kerék lehet a pályán kívül</small></div>
+              <div class="seg" data-key="real.tyres_out"><button data-v="0">0</button><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="wrench"></i><h3>Kötelező boxkiállás</h3><div class="spacer"></div><label class="toggle"><input type="checkbox" data-key="pit.mandatory"><span class="track"></span></label></div>
+            <div id="pitBlock">
+              <div class="row first">
+                <div class="label"><b>Boxablak kezdete</b><small>kör / perc</small></div>
+                <div class="stepper"><button data-step="-1">−</button><input type="number" data-key="pit.start" min="0" max="1000"><button data-step="1">+</button></div>
+              </div>
+              <div class="row">
+                <div class="label"><b>Boxablak vége</b><small>kör / perc</small></div>
+                <div class="stepper"><button data-step="-1">−</button><input type="number" data-key="pit.end" min="0" max="1000"><button data-step="1">+</button></div>
+              </div>
+              <p class="hint">Körszámos versenynél körben, időre menőnél percben értendő.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SZERVER ============ -->
+      <div class="page" id="page-server">
+        <div class="cards">
+          <div class="card">
+            <div class="card-head"><i data-icon="server"></i><h3>Alapadatok</h3></div>
+            <div class="field"><label>Szerver neve</label><input class="input" data-key="server.name" maxlength="80" spellcheck="false"></div>
+            <div class="field"><label>Jelszó a csatlakozáshoz (üresen hagyva nincs jelszó)</label>
+              <div class="input-wrap"><input class="input" type="password" id="pwInput" data-key="server.password" spellcheck="false"><button class="btn sm ghost" id="pwEye" title="Megjelenítés"><i data-icon="eye"></i></button></div></div>
+            <div class="field"><label>Admin jelszó</label>
+              <div class="input-wrap"><input class="input" data-key="server.admin_password" spellcheck="false"><button class="btn sm ghost" id="adminNew" title="Új jelszó"><i data-icon="refresh"></i></button></div></div>
+            <p class="hint">Admin jogot a játékban a chatbe írt <b>/admin &lt;jelszó&gt;</b> paranccsal kapsz (pl. /next_session, /kick, /ban).</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="settings"></i><h3>Beállítások</h3></div>
+            <div class="row first"><div class="label"><b>Automatikus hálózatbeállítás</b><small>indításkor magától megnyitja a portokat (UPnP) és ellenőrzi, hogy elérhető-e a szerver</small></div><label class="toggle"><input type="checkbox" data-key="server.upnp"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Nyilvános szerverlista</b><small>megjelenés az AC Online listájában</small></div><label class="toggle"><input type="checkbox" data-key="server.register_lobby"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Szabad autóválasztás</b><small>pickup mode</small></div><label class="toggle"><input type="checkbox" data-key="server.pickup_mode"><span class="track"></span></label></div>
+            <div class="row"><div class="label"><b>Sessionök ismétlése</b><small>a verseny után újrakezdi (loop mode)</small></div><label class="toggle"><input type="checkbox" data-key="server.loop_mode"><span class="track"></span></label></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="plug"></i><h3>Portok</h3></div>
+            <div class="field-grid">
+              <div class="field"><label>TCP</label><input class="input" type="number" data-key="server.tcp_port"></div>
+              <div class="field"><label>UDP</label><input class="input" type="number" data-key="server.udp_port"></div>
+              <div class="field"><label>HTTP</label><input class="input" type="number" data-key="server.http_port"></div>
+            </div>
+            <p class="hint">Az alapértékeken (9600 / 9600 / 8081) általában nem kell változtatni.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="save"></i><h3>Presetek</h3></div>
+            <p class="hint" style="margin-bottom:14px">A pálya, az autók és minden beállítás elmenthető egy fájlba, amit akár egy barátodnak is átküldhetsz.</p>
+            <div class="btn-row">
+              <button class="btn sm" id="presetSave"><i data-icon="save"></i>Mentés</button>
+              <button class="btn sm" id="presetLoad"><i data-icon="folder"></i>Betöltés</button>
+              <button class="btn sm ghost" id="presetReset"><i data-icon="refresh"></i>Alapértékek</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="download"></i><h3>Program</h3></div>
+            <div class="row first"><div class="label"><b>Verzió</b><small id="verInfo">–</small></div>
+              <button class="btn sm" id="updCheck"><i data-icon="refresh"></i>Frissítés keresése</button></div>
+            <p class="hint">A program induláskor és utána 6 óránként magától megnézi, van-e új verzió. Frissítéskor a beállításaid megmaradnak.</p>
+          </div>
+
+          <div class="card span2">
+            <div class="card-head"><i data-icon="folder"></i><h3>Assetto Corsa mappa</h3></div>
+            <div class="row first"><div class="label"><small>Játék</small><b id="acPath">–</b></div></div>
+            <div class="row"><div class="label"><small>Szerver (acServer.exe)</small><b id="srvPath">–</b></div></div>
+            <div class="btn-row" style="margin-top:10px">
+              <button class="btn sm" id="acChange"><i data-icon="folder"></i>Mappa módosítása</button>
+              <button class="btn sm ghost" id="rescan"><i data-icon="refresh"></i>Tartalom újraolvasása</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ HÁLÓZAT ============ -->
+      <div class="page" id="page-network">
+        <div class="net-grid">
+          <div class="net-tile"><small>Helyi IP</small><div class="val" id="netLocal">–</div></div>
+          <div class="net-tile"><small>Publikus IP</small><div class="val" id="netPublic">–</div></div>
+          <div class="net-tile"><small>Router (UPnP)</small><div class="val" id="netUpnp">–</div></div>
+        </div>
+        <div class="verdict" id="verdict"><i data-icon="globe"></i><div><b>Hálózat ellenőrzése…</b><span class="muted">Egy pillanat.</span></div></div>
+
+        <div class="cards">
+          <div class="card">
+            <div class="card-head"><i data-icon="activity"></i><h3>Eszközök</h3></div>
+            <div class="btn-row">
+              <button class="btn sm" id="netCheck"><i data-icon="refresh"></i>Hálózat ellenőrzése</button>
+              <button class="btn sm" id="fwBtn"><i data-icon="shield"></i>Tűzfal szabály</button>
+              <button class="btn sm primary" id="portTest"><i data-icon="radar"></i>Elérhetőség teszt</button>
+            </div>
+            <div id="testResult"></div>
+            <p class="hint" style="margin-top:14px">Az elérhetőség teszt több országból megpróbál csatlakozni a szerveredhez, így kiderül, hogy a barátaid el fogják-e érni. A teszthez a szervernek futnia kell.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><i data-icon="link"></i><h3>Meghívó a barátoknak</h3></div>
+            <div class="chip-select" id="ipChoices"></div>
+            <div class="link-box"><input class="input" id="linkField" readonly></div>
+            <div class="btn-row">
+              <button class="btn sm primary" id="copyLink"><i data-icon="copy"></i>Link másolása</button>
+              <button class="btn sm" id="copyInvite"><i data-icon="users"></i>Teljes meghívó szöveg</button>
+            </div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-head"><i data-icon="help"></i><h3>Hogyan csatlakoznak a barátok?</h3></div>
+            <p class="hint">
+              <b>Content Managerrel:</b> küldd el nekik a linket, rákattintva a CM megnyitja a szervert, és onnan csatlakozhatnak.<br>
+              <b>Sima AC-ből:</b> ha be van kapcsolva a nyilvános szerverlista, az Online menüben megtalálják a szerver nevét.<br>
+              <b>VPN-nel</b> (Radmin VPN / ZeroTier / Tailscale): válaszd fent a VPN-es címet, és azt küldd el.<br>
+              Ha modolt autót vagy pályát választottál, azt nekik is telepíteniük kell.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ NAPLÓ ============ -->
+      <div class="page" id="page-log">
+        <div class="terminal">
+          <div class="term-bar">
+            <div class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+            <span class="muted">acServer.exe</span>
+            <div class="spacer"></div>
+            <label class="muted" style="display:flex;align-items:center;gap:8px">Automatikus görgetés <label class="toggle"><input type="checkbox" id="autoScroll" checked><span class="track"></span></label></label>
+            <button class="btn sm ghost" id="logClear"><i data-icon="trash"></i>Törlés</button>
+          </div>
+          <div class="log" id="log"><div class="log-empty" id="logEmpty">A szerver kimenete itt fog megjelenni.</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- választó ablak -->
+<div class="modal" id="picker">
+  <div class="modal-panel">
+    <div class="mp-head"><h2 id="pkTitle">Választás</h2><div class="spacer"></div><button class="icon-btn" data-close><i data-icon="x"></i></button></div>
+    <div class="mp-tools">
+      <div class="search"><i data-icon="search"></i><input class="input" id="pkSearch" placeholder="Keresés…" spellcheck="false"></div>
+      <div class="seg" id="pkFilter"><button data-v="all" class="active">Mind</button><button data-v="stock">Gyári</button><button data-v="mod">Modolt</button></div>
+    </div>
+    <div class="mp-grid" id="pkGrid"></div>
+    <div class="mp-foot">
+      <span class="muted" id="pkHint"></span>
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close>Mégse</button>
+      <button class="btn primary" id="pkOk" disabled>Hozzáadás</button>
+    </div>
+  </div>
+</div>
+
+<!-- megerősítő ablak -->
+<div class="modal" id="confirm">
+  <div class="modal-panel small">
+    <div class="mp-head"><h2 id="cfTitle"></h2></div>
+    <div class="confirm-body" id="cfBody"></div>
+    <div class="mp-foot"><div class="spacer"></div><button class="btn ghost" id="cfCancel">Mégse</button><button class="btn primary" id="cfOk">OK</button></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<div class="loader" id="loader"><div class="loader-inner"><div class="wheel"></div><b>AC Szerver Kezelő</b><span id="loaderText">Betöltés…</span></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>
