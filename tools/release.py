@@ -8,6 +8,7 @@ Lépések: verziószám beírása -> build.bat (exe + telepítő + sha256) -> gi
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -39,6 +40,8 @@ def main() -> None:
     version, notes = sys.argv[1], sys.argv[2].replace("\\n", "\n")
     git = tool("git", r"C:\Program Files\Git\cmd\git.exe")
     gh = tool("gh", r"C:\Program Files\GitHub CLI\gh.exe")
+    # A GitHub CLI maga is a gitet hívja, ezért annak a PATH-ban kell lennie
+    os.environ["PATH"] = str(Path(git).parent) + os.pathsep + os.environ.get("PATH", "")
 
     run(gh, "auth", "status", capture=True)
     if run(git, "status", "--porcelain", capture=True):
