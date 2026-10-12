@@ -329,6 +329,11 @@ function bindEvents() {
 
   // indítás / leállítás
   $("#btnStart").addEventListener("click", startServer);
+  $("#btnJoin").addEventListener("click", async () => {
+    const r = await api().join(S.values["server.http_port"], S.values["server.password"] || "");
+    if (r.ok) toast("ok", "A Content Manager csatlakozik a szerveredhez…");
+    else toast("warn", r.error, 8000);
+  });
   $("#btnStop").addEventListener("click", stopServer);
   $("#btnRestart").addEventListener("click", restartServer);
 
@@ -663,9 +668,27 @@ async function loadImg(wrap, kind, id, skin) {
 }
 
 /* ================================================================ választó ablak */
-const P = { kind: null, sel: new Set(), filter: "all", q: "", observer: null };
+const P = { kind: null, sel: new Set(), filter: "all", q: "", observer: null, newIds: new Set() };
+
+/* Megnyitáskor újraolvassuk a pályákat / autókat, hogy a közben feltett modok is látszódjanak */
+async function refreshContentFor(kind) {
+  const before = new Set(kind === "track" ? S.tracks.map((t) => t.key) : S.allCars.map((c) => c.id));
+  let r;
+  try { r = await api().rescan(); } catch (e) { return; }
+  if (!r || r.error) return;
+  const hadTrack = S.track, hadCars = S.cars.length;
+  setContent(r);
+  const now = kind === "track" ? S.tracks.map((t) => t.key) : S.allCars.map((c) => c.id);
+  const added = now.filter((id) => !before.has(id));
+  added.forEach((id) => P.newIds.add(id));
+  if (S.track !== hadTrack) renderTrackLane();
+  if (S.cars.length !== hadCars) renderCars();
+  if (P.kind === kind && $("#picker").classList.contains("open") && (added.length || now.length !== before.size)) renderPicker();
+  if (added.length) toast("info", `${added.length} új ${kind === "track" ? "pálya" : "autó"} található.`);
+}
 
 function openPicker(kind) {
+  refreshContentFor(kind);
   P.kind = kind;
   P.sel = new Set();
   P.filter = "all";
@@ -709,6 +732,7 @@ function renderPicker() {
         ${it.mod ? '<span class="badge mod">Mod</span>' : ""}
         ${isAdded ? '<span class="badge added-tag">Hozzáadva</span>' : ""}
         ${isCurrent ? '<span class="badge added-tag">Jelenlegi</span>' : ""}
+        ${!isAdded && !isCurrent && P.newIds.has(id) ? '<span class="badge new-tag">Új</span>' : ""}
         <span class="check">${icon("check")}</span>
         <div class="tb"><b title="${esc(it.name)}">${esc(it.name)}</b><small>${sub}</small></div>
       </div>`;

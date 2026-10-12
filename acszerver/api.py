@@ -13,6 +13,8 @@ import os
 import secrets
 import threading
 import time
+import urllib.parse
+import winreg
 from ctypes import wintypes
 from pathlib import Path
 
@@ -649,6 +651,24 @@ class Api:
         )
         self._log("Tűzfal szabályok hozzáadva." if ok else "A tűzfal szabályok hozzáadása nem sikerült (vagy megszakítottad).")
         return {"ok": ok}
+
+    def join(self, http_port, password: str = "") -> dict:
+        """A host csatlakozása a saját szerveréhez a Content Manageren keresztül."""
+        if not self._server.running:
+            return {"error": "A szerver nem fut."}
+        try:
+            winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "acmanager"))
+        except OSError:
+            return {"error": "A Content Manager nincs telepítve, ezért nem tudok automatikusan csatlakozni. "
+                             "A sima AC-ben az Online menüben a szerver nevével találod meg."}
+        query = {"ip": "127.0.0.1", "httpPort": int(http_port)}
+        if password:
+            query["password"] = password
+        try:
+            os.startfile("acmanager://race/online/join?" + urllib.parse.urlencode(query))
+        except OSError as e:
+            return {"error": f"Nem sikerült elindítani a Content Managert: {e}"}
+        return {"ok": True}
 
     def links(self, ip: str, http_port) -> dict:
         web, app = network.cm_links(ip, int(http_port))
